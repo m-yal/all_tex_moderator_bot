@@ -1,12 +1,16 @@
 {
   "name": "all_tex_moderator_bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Telegram bot for post moderation",
+  "main": "bot.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/bot.js"
   },
-  "keywords": [],
-  "author": "",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "author": "Your Name",
   "license": "ISC"
 }
