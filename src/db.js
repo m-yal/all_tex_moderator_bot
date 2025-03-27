@@ -18,4 +18,16 @@ async function createTable() {
     console.log("Таблиця ініціалізована!");
 }
 
-export { connection, createTable };
+async function saveMessageId(messageId) {
+    try {
+        await connection.execute(
+            `INSERT INTO \`${process.env.CHANNEL_ID}\` (message_id) VALUES (?)`,
+            [messageId]
+        );
+        console.log(`✅ Повідомлення ${messageId} збережено в базі.`);
+    } catch (error) {
+        console.error("❌ Помилка збереження message_id:", error.message);
+    }
+}
+
+export { connection, createTable, saveMessageId };

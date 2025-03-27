@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
+import { saveMessageId } from './db.js';
+import { connection } from './db.js'; // Імпортуємо з'єднання
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const channelId = process.env.CHANNEL_ID;
@@ -53,6 +55,26 @@ bot.onText(/Опублікувати/, (msg) => {
     bot.sendMessage(chatId, 'Виберіть параметри для публікації: текст, відео або зображення...', options);
 });
 
+// Обробка текстових постів
+bot.onText(/Текст/, (msg) => {
+    const chatId = msg.chat.id;
+    bot.sendMessage(chatId, 'Введіть текст для публікації:');
+    
+    bot.once('message', async (message) => {
+        if (!message.text || message.text === "Назад") return;
+
+        try {
+            const sentMessage = await bot.sendMessage(channelId, message.text);
+            await saveMessageId(sentMessage.message_id);
+            console.log(`Пост ${sentMessage.message_id} забережно до бази даних`);
+            bot.sendMessage(chatId, '✅ Текст опубліковано!', mainMenu);
+        } catch (error) {
+            bot.sendMessage(chatId, '❌ Помилка публікації.');
+            console.error(error);
+        }
+    });
+});
+
 // Обробка натискання кнопки "Редагувати"
 bot.onText(/Редагувати/, (msg) => {
     const chatId = msg.chat.id;
@@ -88,3 +110,13 @@ bot.onText(/Назад/, (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(chatId, 'Повертаємося в головне меню...', mainMenu);
 });
+
+// Завершення роботи та закриття з'єднання з базою даних при натисканні CTRL+C
+process.on('SIGINT', async () => {
+    console.log('Отримано сигнал для завершення роботи...');
+    await connection.end();  // Закриваємо з'єднання з базою даних
+    console.log(`З'єднання з базою даних закрито.`);
+    process.exit();  // Завершуємо роботу бота
+});
+
+export default bot;
