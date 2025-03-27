@@ -48,19 +48,16 @@ bot.on('message', async (msg) => {
         case 'Редагувати':
           userStates[chatId] = 'editing';
           bot.sendMessage(chatId, 'Ви перейшли до функції редагування.', backMenu);
-          // Логіка редагування додаватиметься пізніше
           break;
 
         case 'Видалити':
           userStates[chatId] = 'deleting';
-          bot.sendMessage(chatId, 'Ви перейшли до функції видалення.', backMenu);
-          // Логіка видалення додаватиметься пізніше
+          bot.sendMessage(chatId, "Ви перейшли до функції видалення", backMenu);
           break;
 
         case 'Опублікувати':
           userStates[chatId] = 'publishing';
           bot.sendMessage(chatId, 'Ви перейшли до функції публікації.', backMenu);
-          // Логіка публікації додаватиметься пізніше
           break;
 
         default:
@@ -101,6 +98,8 @@ bot.onText(/\/start/, async (msg) => {
     bot.sendMessage(chatId, 'Доступ заборонено.');
   }
 });
+
+
 
 // Завершення роботи
 process.on('SIGINT', async () => {
