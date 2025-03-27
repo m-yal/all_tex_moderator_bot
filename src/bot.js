@@ -1,122 +1,125 @@
 import 'dotenv/config';
 import TelegramBot from 'node-telegram-bot-api';
-import { saveMessageId } from './db.js';
-import { connection } from './db.js'; // Імпортуємо з'єднання
+import { connection, saveMessage, createTable } from './db.js';
+import { checkAccess } from './accessControl.js'; // Імпорт checkAccess
+import { mainMenu, backMenu } from './keyboards.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const channelId = process.env.CHANNEL_ID;
 
+await createTable(channelId);
+
 const bot = new TelegramBot(token, { polling: true });
 
-// Коли користувач натискає /start, бот відповідає з привітальним повідомленням і клавіатурою
-bot.onText(/\/start/, (msg) => {
+// Об’єкт для зберігання стану користувачів
+const userStates = {};
+
+// Обробка натискань на кнопки
+bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
+    const text = msg.text;
 
-    // Створюємо клавіатуру з 3 кнопками, де "Опублікувати" в другому рядку
-    const options = {
-        reply_markup: {
-            keyboard: [
-                ['Редагувати', 'Видалити'], // Перший рядок кнопок
-                ['Опублікувати'] // Другий рядок кнопок
-            ],
-            one_time_keyboard: true, // Клавіатура зникне після натискання
-            resize_keyboard: true // Автоматично змінює розмір клавіатури
-        }
-    };
-
-    // Відправляємо привітальне повідомлення з клавіатурою
-    bot.sendMessage(chatId, 'Привіт! Бот успішно запустився. Чим я можу допомогти?', options);
-});
-
-// Створюємо клавіатуру головного меню
-const mainMenu = {
-    reply_markup: {
-        keyboard: [
-            ['Редагувати', 'Видалити'], // Перший рядок кнопок
-            ['Опублікувати'] // Другий рядок кнопок
-        ],
-        one_time_keyboard: true, // Клавіатура зникне після натискання
-        resize_keyboard: true // Автоматично змінює розмір клавіатури
+    // Перевірка доступу
+    const hasAccess = await checkAccess(bot, channelId, chatId);
+    if (!hasAccess) {
+        bot.sendMessage(chatId, 'Доступ заборонено.');
+        return;
     }
-};
 
-// Обробка натискання кнопки "Опублікувати"
-bot.onText(/Опублікувати/, (msg) => {
-    const chatId = msg.chat.id;
-    const options = {
-        reply_markup: {
-            keyboard: [
-                ['Текст', 'Відео', 'Зображення'], // Кнопки для вибору контенту
-                ['Назад'] // Кнопка "Назад" для повернення в меню
-            ],
-            resize_keyboard: true // Автоматично змінює розмір клавіатури
+    // Пропускаємо обробку /start, бо вона вже оброблена в bot.onText
+    if (text === '/start') {
+        return;
+    }
+
+    // Якщо стану немає, повертаємо до головного меню
+    if (!userStates[chatId]) {
+        userStates[chatId] = 'main';
+        bot.sendMessage(chatId, 'Будь ласка, оберіть дію з меню:', mainMenu);
+        return;
+    }
+  
+    // Обробка залежно від стану
+  switch (userStates[chatId]) {
+    case 'main':
+      switch (text) {
+        case 'Редагувати':
+          userStates[chatId] = 'editing';
+          bot.sendMessage(chatId, 'Ви перейшли до функції редагування.', backMenu);
+          // Логіка редагування додаватиметься пізніше
+          break;
+
+        case 'Видалити':
+          userStates[chatId] = 'deleting';
+          bot.sendMessage(chatId, 'Ви перейшли до функції видалення.', backMenu);
+          // Логіка видалення додаватиметься пізніше
+          break;
+
+        case 'Опублікувати':
+          userStates[chatId] = 'publishing';
+          bot.sendMessage(chatId, 'Ви перейшли до функції публікації.', backMenu);
+          // Логіка публікації додаватиметься пізніше
+          break;
+
+        default:
+          if (text !== '/start') {
+            bot.sendMessage(chatId, 'Будь ласка, оберіть дію з меню:', mainMenu);
+          }
+      }
+      break;
+
+    case 'editing':
+        if (text === 'Назад') {
+            userStates[chatId] = 'main';
+            bot.sendMessage(chatId, 'Повернення до головного меню:', mainMenu);
+          } else {
+            bot.sendMessage(chatId, 'Ви в режимі редагування. Логіка ще не додана.', backMenu);
         }
-    };
-    bot.sendMessage(chatId, 'Виберіть параметри для публікації: текст, відео або зображення...', options);
-});
+      break;
 
-// Обробка текстових постів
-bot.onText(/Текст/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Введіть текст для публікації:');
-    
-    bot.once('message', async (message) => {
-        if (!message.text || message.text === "Назад") return;
-
-        try {
-            const sentMessage = await bot.sendMessage(channelId, message.text);
-            await saveMessageId(sentMessage.message_id);
-            console.log(`Пост ${sentMessage.message_id} забережно до бази даних`);
-            bot.sendMessage(chatId, '✅ Текст опубліковано!', mainMenu);
-        } catch (error) {
-            bot.sendMessage(chatId, '❌ Помилка публікації.');
-            console.error(error);
+    case 'deleting':
+        if (text === 'Назад') {
+            userStates[chatId] = 'main';
+            bot.sendMessage(chatId, 'Повернення до головного меню:', mainMenu);
+          } else {
+            bot.sendMessage(chatId, 'Ви в режимі видалення. Логіка ще не додана.', backMenu);
         }
-    });
-});
+      break;
 
-// Обробка натискання кнопки "Редагувати"
-bot.onText(/Редагувати/, (msg) => {
-    const chatId = msg.chat.id;
-    const options = {
-        reply_markup: {
-            keyboard: [
-                ['Вибір посту для редагування'], // Кнопка для вибору поста
-                ['Назад'] // Кнопка "Назад" для повернення в меню
-            ],
-            resize_keyboard: true // Автоматично змінює розмір клавіатури
+    case 'publishing':
+        if (text === 'Назад') {
+            userStates[chatId] = 'main';
+            bot.sendMessage(chatId, 'Повернення до головного меню:', mainMenu);
+          } else {
+            bot.sendMessage(chatId, 'Ви в режимі публікації. Логіка ще не додана.', backMenu);
         }
-    };
-    bot.sendMessage(chatId, 'Виберіть пост для редагування...', options);
+      break;
+
+    default:
+      // Якщо стан невідомий, повертаємо до головного меню
+      userStates[chatId] = 'main';
+      bot.sendMessage(chatId, 'Статус користувача скинуто. Оберіть дію:', mainMenu);
+  }
 });
 
-// Обробка натискання кнопки "Видалити"
-bot.onText(/Видалити/, (msg) => {
-    const chatId = msg.chat.id;
-    const options = {
-        reply_markup: {
-            keyboard: [
-                ['Вибір посту для видалення'], // Кнопка для вибору поста
-                ['Назад'] // Кнопка "Назад" для повернення в меню
-            ],
-            resize_keyboard: true // Автоматично змінює розмір клавіатури
-        }
-    };
-    bot.sendMessage(chatId, 'Виберіть пост для видалення...', options);
+// Команда /start
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id;
+  const hasAccess = await checkAccess(bot, channelId, chatId); // Передаємо bot і channelId
+
+  if (hasAccess) {
+    userStates[chatId] = 'main'; // Встановлюємо початковий стан
+    bot.sendMessage(chatId, 'Вітаю, адміністраторе! Оберіть дію:', mainMenu);
+  } else {
+    bot.sendMessage(chatId, 'Доступ заборонено.');
+  }
 });
 
-// Обробка натискання кнопки "Назад" з будь-якої секції
-bot.onText(/Назад/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Повертаємося в головне меню...', mainMenu);
-});
-
-// Завершення роботи та закриття з'єднання з базою даних при натисканні CTRL+C
+// Завершення роботи
 process.on('SIGINT', async () => {
-    console.log('Отримано сигнал для завершення роботи...');
-    await connection.end();  // Закриваємо з'єднання з базою даних
-    console.log(`З'єднання з базою даних закрито.`);
-    process.exit();  // Завершуємо роботу бота
+  console.log('Отримано сигнал для завершення роботи...');
+  await connection.end();
+  console.log(`З'єднання з базою даних закрито.`);
+  process.exit();
 });
 
 export default bot;

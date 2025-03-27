@@ -8,26 +8,32 @@ const connection = await mysql.createConnection({
     database: process.env.DB_NAME,
 });
 
-async function createTable() {
+// Оновлене створення таблиці для конкретного каналу
+async function createTable(channelId) {
     await connection.execute(`
-        CREATE TABLE IF NOT EXISTS \`${process.env.CHANNEL_ID}\` (
-            message_id VARCHAR(50) PRIMARY KEY,
-            publish_date DATETIME DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS \`${channelId}\` (
+            message_id VARCHAR(255) PRIMARY KEY,
+            publish_date DATETIME NOT NULL,
+            text TEXT,
+            media_url TEXT,
+            media_type VARCHAR(50)
         )
     `);
-    console.log("Таблиця ініціалізована!");
+    console.log(`Таблиця для каналу ${channelId} ініціалізована!`);
 }
 
-async function saveMessageId(messageId) {
+// Оновлене збереження повідомлення
+async function saveMessage(channelId, messageId, text, mediaUrl = null, mediaType = null) {
     try {
-        await connection.execute(
-            `INSERT INTO \`${process.env.CHANNEL_ID}\` (message_id) VALUES (?)`,
-            [messageId]
-        );
-        console.log(`✅ Повідомлення ${messageId} збережено в базі.`);
+        const query = `
+            INSERT INTO \`${channelId}\` (message_id, publish_date, text, media_url, media_type) 
+            VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?)
+        `;
+        await connection.execute(query, [messageId, text, mediaUrl, mediaType]);
+        console.log(`✅ Повідомлення ${messageId} для каналу ${channelId} збережено в базі.`);
     } catch (error) {
-        console.error("❌ Помилка збереження message_id:", error.message);
+        console.error("❌ Помилка збереження повідомлення:", error.message);
     }
 }
 
-export { connection, createTable, saveMessageId };
+export { connection, createTable, saveMessage };
