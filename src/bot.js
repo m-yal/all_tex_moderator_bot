@@ -3,6 +3,9 @@ import TelegramBot from 'node-telegram-bot-api';
 import { connection, saveMessage, createTable } from './db.js';
 import { checkAccess } from './accessControl.js'; // Імпорт checkAccess
 import { mainMenu, backMenu } from './keyboards.js';
+import { handleEdit } from './edit.js';
+import { handleDelete } from './delete.js';
+import { handlePublish } from './publish.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const channelId = process.env.CHANNEL_ID;
@@ -68,36 +71,21 @@ bot.on('message', async (msg) => {
       break;
 
     case 'editing':
-        if (text === 'Назад') {
-            userStates[chatId] = 'main';
-            bot.sendMessage(chatId, 'Повернення до головного меню:', mainMenu);
-          } else {
-            bot.sendMessage(chatId, 'Ви в режимі редагування. Логіка ще не додана.', backMenu);
-        }
-      break;
+        await handleEdit(bot, msg, channelId, userStates);
+        break;
 
     case 'deleting':
-        if (text === 'Назад') {
-            userStates[chatId] = 'main';
-            bot.sendMessage(chatId, 'Повернення до головного меню:', mainMenu);
-          } else {
-            bot.sendMessage(chatId, 'Ви в режимі видалення. Логіка ще не додана.', backMenu);
-        }
-      break;
+        await handleDelete(bot, msg, channelId, userStates);
+        break;
 
     case 'publishing':
-        if (text === 'Назад') {
-            userStates[chatId] = 'main';
-            bot.sendMessage(chatId, 'Повернення до головного меню:', mainMenu);
-          } else {
-            bot.sendMessage(chatId, 'Ви в режимі публікації. Логіка ще не додана.', backMenu);
-        }
-      break;
+        await handlePublish(bot, msg, channelId, userStates);
+        break;
 
     default:
-      // Якщо стан невідомий, повертаємо до головного меню
-      userStates[chatId] = 'main';
-      bot.sendMessage(chatId, 'Статус користувача скинуто. Оберіть дію:', mainMenu);
+        // Якщо стан невідомий, повертаємо до головного меню
+        userStates[chatId] = 'main';
+        bot.sendMessage(chatId, 'Статус користувача скинуто. Оберіть дію:', mainMenu);
   }
 });
 
