@@ -22,18 +22,21 @@ async function createTable(channelId) {
     console.log(`Таблиця для каналу ${channelId} ініціалізована!`);
 }
 
-// Оновлене збереження повідомлення
-async function saveMessage(channelId, messageId, text, mediaUrl = null, mediaType = null) {
+// For file clearCurrTable.js only
+export async function clearCurrTable() {
+    const tableName = process.env.CHANNEL_ID;
+
     try {
         const query = `
-            INSERT INTO \`${channelId}\` (message_id, publish_date, text, media_url, media_type) 
-            VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?)
+            DELETE FROM \`${tableName}\` 
         `;
-        await connection.execute(query, [messageId, text, mediaUrl, mediaType]);
-        console.log(`✅ Повідомлення ${messageId} для каналу ${channelId} збережено в базі.`);
+        await connection.execute(query);
+        console.log(`✅ Таблицю каналу ${tableName} очищено.`);
+        await connection.end();
     } catch (error) {
         console.error("❌ Помилка збереження повідомлення:", error.message);
+        await connection.end();
     }
 }
 
-export { connection, createTable, saveMessage };
+export { connection, createTable };

@@ -1,7 +1,7 @@
 // Головне меню з трьома кнопками
 export const mainMenu = {
     reply_markup: {
-        keyboard: [['Редагувати', 'Видалити', 'Опублікувати']],
+        keyboard: [['Редагувати', 'Опублікувати']],
         resize_keyboard: true,
         one_time_keyboard: true
     }
