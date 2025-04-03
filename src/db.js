@@ -12,11 +12,7 @@ const connection = await mysql.createConnection({
 async function createTable(channelId) {
     await connection.execute(`
         CREATE TABLE IF NOT EXISTS \`${channelId}\` (
-            message_id VARCHAR(255) PRIMARY KEY,
-            publish_date DATETIME NOT NULL,
-            text TEXT,
-            media_url TEXT,
-            media_type VARCHAR(50)
+            
         )
     `);
     console.log(`Таблиця для каналу ${channelId} ініціалізована!`);

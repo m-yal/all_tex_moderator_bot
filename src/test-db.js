@@ -14,8 +14,7 @@ async function testConnection() {
 
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS \`${process.env.CHANNEL_ID}\` (
-                message_id VARCHAR(50) PRIMARY KEY,
-                publish_date DATETIME DEFAULT CURRENT_TIMESTAMP
+                
             )
         `);
 
